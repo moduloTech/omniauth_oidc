@@ -78,6 +78,7 @@ module OmniAuth
       }
 
       option :logout_path, "/logout"
+      option :redirect_uri
 
       def uid
         user_info.raw_attributes[options.uid_field.to_sym] || user_info.sub
@@ -190,7 +191,7 @@ module OmniAuth
       end
 
       def redirect_uri
-        "#{request.base_url}/auth/#{name}/callback"
+        options.redirect_uri || "#{request.base_url}/auth/#{name}/callback"
       end
 
       def encoded_post_logout_redirect_uri
