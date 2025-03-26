@@ -6,8 +6,8 @@ require "net/http"
 require "open-uri"
 require "omniauth"
 require "openid_connect"
-require "openid_config_parser"
 require "forwardable"
+require "hashie"
 require "httparty"
 
 Dir[File.join(File.dirname(__FILE__), "oidc", "*.rb")].sort.each { |file| require_relative file }
@@ -125,7 +125,7 @@ module OmniAuth
                 "Configuration endpoint is missing from options"
         end
 
-        @config ||= OpenidConfigParser.fetch_openid_configuration(client_options.config_endpoint)
+        @config ||= fetch_openid_configuration(client_options.config_endpoint)
       end
 
       # Detects if current request is for the logout url and makes a redirect to end session with OIDC provider
@@ -217,6 +217,17 @@ module OmniAuth
         endpoint = endpoint[start_index..]
         endpoint = "/#{endpoint}" unless endpoint.start_with?("/")
         endpoint
+      end
+
+      # provide functionality of openid_config_parser + retryable gems
+      # fetch config, parse response, return openstruct-like object
+      def fetch_openid_configuration(endpoint_url)
+        retries ||= 0
+        response = HTTParty.get(endpoint_url, format: :json)
+        Hashie::Mash.new(response)
+      rescue Net::ReadTimeout, Net::OpenTimeout
+        retry if (retries += 1) < 3
+        raise
       end
 
       # Override for the CallbackError class
